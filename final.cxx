@@ -85,12 +85,25 @@ int main()
     double FOV_Y = camera.angle;
 
 
-
-
     vtkDataSetReader *rdr = vtkDataSetReader::New();
     rdr->SetFileName("astro64.vtk");
     rdr->Update();
     cerr << "After update, file has " << rdr->GetOutput()->GetNumberOfCells() << " cells." << endl;
+
+	// Gather data from file
+	int dims[3];
+	vtkRectilinearGrid *rgrid = (vtkRectilinearGrid *) rdr->GetOutput();
+	rgrid->GetDimensions(dims);
+
+	float *X = (float *) rgrid->GetXCoordinates()->GetVoidPointer(0);
+	float *Y = (float *) rgrid->GetYCoordinates()->GetVoidPointer(0);
+	float *Z = (float *) rgrid->GetZCoordinates()->GetVoidPointer(0);
+
+	float *F = (float *) rgrid->GetPointData()->GetVectors()->GetVoidPointer(0);
+
+
+
+
 
     // Look = Distance from focus to camera
     double look[ 3 ] = {
@@ -147,6 +160,11 @@ int main()
             double ray_ret[3];
             double *ray = rayForPixel( pixel_w, pixel_h, look, delta_rx, delta_ry, WIDTH, HEIGHT, ray_ret );
                 if(T)printf( "Ray for (%4d, %4d): x: %f, y: %f, z: %f\n", pixel_w, pixel_h, ray[x], ray[y], ray[z] );
+
+			//
+
+
+
         }
     }
 
@@ -189,9 +207,9 @@ int main()
   renWin->SetSize(WIDTH, HEIGHT);
 
    
-  ren1->GetActiveCamera()->SetFocalPoint(camera.focus[0],camera.focus[1],camera.focus[2]);
-  ren1->GetActiveCamera()->SetPosition(camera.position[0],camera.position[1],camera.position[2]);
-  ren1->GetActiveCamera()->SetViewUp(camera.up[0],camera.up[1],camera.up[2]);
+  ren1->GetActiveCamera()->SetFocalPoint(camera.focus[x], camera.focus[y], camera.focus[z]);
+  ren1->GetActiveCamera()->SetPosition(camera.position[x], camera.position[y], camera.position[z]);
+  ren1->GetActiveCamera()->SetViewUp(camera.up[x], camera.up[y], camera.up[z]);
   ren1->GetActiveCamera()->SetClippingRange(camera.near, camera.far);
   ren1->GetActiveCamera()->SetViewAngle(camera.angle);
   ren1->GetActiveCamera()->SetDistance(70);
