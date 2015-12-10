@@ -36,21 +36,17 @@ const int y = 1;
 const int z = 2;
 
 
-double *VectorDotProduct( const double *A, const double *B ) {
-    static double ret[3] = {    
-        A[x] * B[x], 
-        A[y] * B[y],
-        A[z] * B[z] 
-    };
+double *VectorDotProduct( const double *A, const double *B, double ret[] ) {
+    ret[x] = A[x] * B[x];
+    ret[y] = A[y] * B[y];
+    ret[z] = A[z] * B[z];
     return ret;
 }
 
-double *VectorCrossProduct( const double *A, const double *B ) {
-    static double ret[3] = {
-        (( A[y] * B[z] ) - ( A[z] * B[y] )),
-        (( A[z] * B[x] ) - ( A[x] * B[z] )),
-        (( A[x] * B[y] ) - ( A[y] * B[x] ))
-    };
+double *VectorCrossProduct( const double *A, const double *B, double ret[] ) {
+    ret[x] = (( A[y] * B[z] ) - ( A[z] * B[y] ));
+    ret[y] = (( A[z] * B[x] ) - ( A[x] * B[z] ));
+    ret[z] = (( A[x] * B[y] ) - ( A[y] * B[x] ));
     return ret;
 }
 
@@ -58,21 +54,17 @@ double VectorMagnitude( const double *A ) {
     return sqrt( pow(A[x], 2) + pow(A[y], 2) + pow(A[z], 2) );
 }
 
-double *rayForPixel( int i, int j, double *look, double *delta_rx, double *delta_ry, int width, int height ) {
-    static double rd[3] = {
-        ( look[x] / VectorMagnitude( look ) ) + 
+double *rayForPixel( int i, int j, double *look, double *delta_rx, double *delta_ry, int width, int height, double ret[] ) {
+    ret[x] = ( look[x] / VectorMagnitude( look ) ) + 
         (((( 2 * i ) + 1 - width  ) / 2 ) * delta_rx[x] ) + 
-        (((( 2 * j ) + 1 - height ) / 2 ) * delta_ry[x] )
-    ,
-        ( look[y] / VectorMagnitude( look ) ) + 
+        (((( 2 * j ) + 1 - height ) / 2 ) * delta_ry[x] );
+    ret[y] = ( look[y] / VectorMagnitude( look ) ) + 
         (((( 2 * i ) + 1 - width  ) / 2 ) * delta_rx[y] ) + 
-        (((( 2 * j ) + 1 - height ) / 2 ) * delta_ry[y] )
-    ,
-        ( look[z] / VectorMagnitude( look ) ) + 
+        (((( 2 * j ) + 1 - height ) / 2 ) * delta_ry[y] );
+    ret[z] = ( look[z] / VectorMagnitude( look ) ) + 
         (((( 2 * i ) + 1 - width  ) / 2 ) * delta_rx[z] ) + 
-        (((( 2 * j ) + 1 - height ) / 2 ) * delta_ry[z] )
-    };
-    return rd;
+        (((( 2 * j ) + 1 - height ) / 2 ) * delta_ry[z] );
+    return ret;
 }
 
 
@@ -87,7 +79,7 @@ int main()
     Camera camera = SetupCamera();
     
     const int WIDTH     = 1024; // px
-    const int HEIGHT    = 1024  // px;
+    const int HEIGHT    = 1024; // px;
 
     double FOV_X = camera.angle;
     double FOV_Y = camera.angle;
@@ -114,7 +106,8 @@ int main()
 
 
     // vector cross product of look and up
-    double *lookXup = VectorCrossProduct( look, camera.up );
+    double lookXup_ret[3];
+    double *lookXup = VectorCrossProduct( look, camera.up, lookXup_ret );
         if(T)printf( "lookXup:\tx: %f, y: %f, z: %f\n", lookXup[x], lookXup[y], lookXup[z] );
 
     double ru[ 3 ] = { 
@@ -123,7 +116,8 @@ int main()
         lookXup[z] / VectorMagnitude( lookXup )
     };  if(T)printf( "ru:\t\tx: %f, y: %f, z: %f\n", ru[x], ru[y], ru[z] );
 
-    double *lookXru = VectorCrossProduct( look, ru );
+    double lookXru_ret[3];
+    double *lookXru = VectorCrossProduct( look, ru, lookXru_ret );
         if(T)printf( "lookXru:\tx: %f, y:%f, z: %f\n", lookXru[x], lookXru[y], lookXru[z] );
 
     double rv[ 3 ] = {
@@ -150,7 +144,9 @@ int main()
     int pixel_h;
     for ( pixel_h = 0; pixel_h < HEIGHT; pixel_h++ ) {
         for ( pixel_w = 0; pixel_w < WIDTH; pixel_w++ ) {
-            double *ray = rayForPixel( pixel_w, pixel_h, look, delta_rx, delta_ry, WIDTH, HEIGHT );
+            double ray_ret[3];
+            double *ray = rayForPixel( pixel_w, pixel_h, look, delta_rx, delta_ry, WIDTH, HEIGHT, ray_ret );
+                if(T)printf( "Ray for (%4d, %4d): x: %f, y: %f, z: %f\n", pixel_w, pixel_h, ray[x], ray[y], ray[z] );
         }
     }
 
