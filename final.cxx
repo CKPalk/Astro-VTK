@@ -1,20 +1,3 @@
-/*=========================================================================
-
-  Program:   Visualization Toolkit
-  Module:    SpecularSpheres.cxx
-
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
-
-=========================================================================*/
-//
-// This examples demonstrates the effect of specular lighting.
-//
 #include "vtkSmartPointer.h"
 #include "vtkSphereSource.h"
 #include "vtkPolyDataMapper.h"
@@ -45,8 +28,7 @@
 #include "astro.cxx"
 
 
-// Change to false for no printing
-const bool P = true;
+const bool T = true; // Change to false for no buffer
 
 
 const int x = 0;
@@ -76,6 +58,26 @@ double VectorMagnitude( const double *A ) {
     return sqrt( pow(A[x], 2) + pow(A[y], 2) + pow(A[z], 2) );
 }
 
+double *rayForPixel( int i, int j, double *look, double *delta_rx, double *delta_ry, int width, int height ) {
+    static double rd[3] = {
+        ( look[x] / VectorMagnitude( look ) ) + 
+        (((( 2 * i ) + 1 - width  ) / 2 ) * delta_rx[x] ) + 
+        (((( 2 * j ) + 1 - height ) / 2 ) * delta_ry[x] )
+    ,
+        ( look[y] / VectorMagnitude( look ) ) + 
+        (((( 2 * i ) + 1 - width  ) / 2 ) * delta_rx[y] ) + 
+        (((( 2 * j ) + 1 - height ) / 2 ) * delta_ry[y] )
+    ,
+        ( look[z] / VectorMagnitude( look ) ) + 
+        (((( 2 * i ) + 1 - width  ) / 2 ) * delta_rx[z] ) + 
+        (((( 2 * j ) + 1 - height ) / 2 ) * delta_ry[z] )
+    };
+    return rd;
+}
+
+
+
+
 
 
 
@@ -84,8 +86,8 @@ int main()
 
     Camera camera = SetupCamera();
     
-    int WIDTH = 1024;
-    int HEIGHT = 1024;
+    const int WIDTH     = 1024; // px
+    const int HEIGHT    = 1024  // px;
 
     double FOV_X = camera.angle;
     double FOV_Y = camera.angle;
@@ -103,33 +105,54 @@ int main()
         camera.focus[x] - camera.position[x],
         camera.focus[y] - camera.position[y],
         camera.focus[z] - camera.position[z]
-    };  if(P)printf( "look:\t\tx: %f, y: %f, z: %f\n", look[x], look[y], look[z] );
-        if(P)printf( "up:  \t\tx: %f, y: %f, z: %f\n", camera.up[x], camera.up[y], camera.up[z] );
+    };  if(T)printf( "look:\t\tx: %f, y: %f, z: %f\n", look[x], look[y], look[z] );
+        if(T)printf( "up:  \t\tx: %f, y: %f, z: %f\n", camera.up[x], camera.up[y], camera.up[z] );
 
+    // Magnitude of look
     double look_length = VectorMagnitude( look );
-        if(P)printf( "look_length:\t%f\n", look_length );
+        if(T)printf( "look_length:\t%f\n", look_length );
 
-    double *lookXUp = VectorCrossProduct( look, camera.up );
-        if(P)printf( "lookXUp:\tx: %f, y: %f, z: %f\n", lookXUp[x], lookXUp[y], lookXUp[z] );
+
+    // vector cross product of look and up
+    double *lookXup = VectorCrossProduct( look, camera.up );
+        if(T)printf( "lookXup:\tx: %f, y: %f, z: %f\n", lookXup[x], lookXup[y], lookXup[z] );
 
     double ru[ 3 ] = { 
-        lookXUp[x] / VectorMagnitude( lookXUp ),
-        lookXUp[y] / VectorMagnitude( lookXUp ),
-        lookXUp[z] / VectorMagnitude( lookXUp )
-    };  if(P)printf( "ru:\t\tx: %f, y: %f, z: %f\n", ru[x], ru[y], ru[z] );
+        lookXup[x] / VectorMagnitude( lookXup ),
+        lookXup[y] / VectorMagnitude( lookXup ),
+        lookXup[z] / VectorMagnitude( lookXup )
+    };  if(T)printf( "ru:\t\tx: %f, y: %f, z: %f\n", ru[x], ru[y], ru[z] );
+
+    double *lookXru = VectorCrossProduct( look, ru );
+        if(T)printf( "lookXru:\tx: %f, y:%f, z: %f\n", lookXru[x], lookXru[y], lookXru[z] );
 
     double rv[ 3 ] = {
-    };  if(P)printf( "rv:\t\tx: %f, y: %f, z: %f\n", rv[x], rv[y], rv[z] );
+        lookXru[x] / VectorMagnitude( lookXru ),
+        lookXru[y] / VectorMagnitude( lookXru ),
+        lookXru[z] / VectorMagnitude( lookXru )
+    };  if(T)printf( "rv:\t\tx: %f, y: %f, z: %f\n", rv[x], rv[y], rv[z] );
 
-    // Calculate field of view for x and y
-    // Inverse Tangent // tan^-1( W / look )
+    double delta_rx[ 3 ] = {
+        (( 2 * tan( FOV_X / 2 ) ) / WIDTH ) * ru[x],
+        (( 2 * tan( FOV_X / 2 ) ) / WIDTH ) * ru[y],
+        (( 2 * tan( FOV_X / 2 ) ) / WIDTH ) * ru[z]
+    };  if(T)printf( "delta_rx\tx: %f, y: %f, z: %f\n", delta_rx[x], delta_rx[y], delta_rx[z] );
 
-    if(P)printf( "Look length:\t%f\n", look_length);
+    double delta_ry[ 3 ] = {
+        (( 2 * tan( FOV_Y / 2 ) ) / HEIGHT ) * rv[x],
+        (( 2 * tan( FOV_Y / 2 ) ) / HEIGHT ) * rv[y],
+        (( 2 * tan( FOV_Y / 2 ) ) / HEIGHT ) * rv[z]
+    };  if(T)printf( "delta_ry\tx: %f, y: %f, z: %f\n", delta_ry[x], delta_ry[y], delta_ry[z] );
 
-    
-    //double delta_rx[ 3 ] = {
-        //  (2 * tan(/2))/(
 
+    // Iterate over pixels on screen
+    int pixel_w;
+    int pixel_h;
+    for ( pixel_h = 0; pixel_h < HEIGHT; pixel_h++ ) {
+        for ( pixel_w = 0; pixel_w < WIDTH; pixel_w++ ) {
+            double *ray = rayForPixel( pixel_w, pixel_h, look, delta_rx, delta_ry, WIDTH, HEIGHT );
+        }
+    }
 
 
 
